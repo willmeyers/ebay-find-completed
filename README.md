@@ -1,2 +1,3 @@
 # ebay-find-completed
-Hopefully a temporary solution to find sold and completed items on eBay.
+
+eBay removed the very useful `findCompletedItems` endpoint from their api. Now we have to scrape their website. 😒
