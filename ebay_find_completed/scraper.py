@@ -4,7 +4,7 @@ import asyncio
 
 import pyppeteer
 
-from .helpers import arange
+from .helpers import alist
 from .element import Element
 
 
@@ -18,12 +18,12 @@ class Scraper:
         self = Scraper()
 
         page = await context.newPage()
-        await page.goto(f'https://www.ebay.com/sch/i.html?_from=R40&_nkw={query}&_sacat=0&rt=nc&LH_Sold=1&LH_Complete=1&_pgn={from_page}')
+        await page.goto(f'https://www.ebay.com/sch/i.html?_from=R40&_nkw={query}&_sacat=0&rt=nc&LH_Sold=1&LH_Complete=1&_pgn={from_page}&_ipg=200')
 
         page_results = await page.evaluate('''
             () => {
                 let results = [];
-                let pages = document.querySelector(".pagination__items");
+                let pagesContainer = document.querySelector(".pagination__items");
 
                 document.querySelectorAll(".s-item__wrapper ").forEach((item) => {
                     let title = item.querySelector("h3").outerHTML;
@@ -50,10 +50,14 @@ class Scraper:
                     })
                 });
 
-                if (pages) {
-                    pages = pages.children.length;
+                pages = [];
+
+                if (pagesContainer) {
+                    pagesContainer.childNodes.forEach((li) => {
+                        pages.push(parseInt(li.textContent))
+                    });
                 } else {
-                    pages = 1
+                    pages = [1];
                 }
 
                 return {
@@ -85,18 +89,27 @@ class Scraper:
         return self
 
 
-async def fetch(query: str, get_all_pages: bool = False) -> typing.List:
+async def search(query: str, get_all_pages: bool = False) -> typing.List:
     browser = await pyppeteer.launch(headless=True)
     context = await browser.createIncognitoBrowserContext()
 
     s = await Scraper.find_completed_items(context, query)
 
     items = s.items
+    page_count = s.pages
+
+    print('pg\tpages')
 
     if get_all_pages:
-        if s.pages > 1:
-            async for pn in arange(s.pages):
+        if len(page_count) > 1:
+            async for pn in alist(page_count):
+                asyncio.sleep(1)
                 page_items = await Scraper.find_completed_items(context, query, from_page=pn)
+                
+                page_items_page_count = page_items.pages
+
+                print(f'{pn}\t{page_count}\tgot: {len(page_items.items[pn])} listings')
+
                 items.update(page_items.items)
 
     return s.items
