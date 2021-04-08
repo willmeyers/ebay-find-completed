@@ -18,4 +18,4 @@ from ebay_find_completed import search
 asyncio.get_event_loop().run_until_complete(search('a rare collectible'))
 ```
 
-That's it.
+That's it and all.
